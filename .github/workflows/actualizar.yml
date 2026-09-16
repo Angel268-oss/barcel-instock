@@ -1,1 +1,40 @@
+name: Actualizar datos Barcel
 
+on:
+  push:
+    paths:
+      - 'excel/*.xlsm'
+      - 'excel/*.xlsx'
+
+jobs:
+  convertir:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Python y dependencias
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar openpyxl
+        run: pip install openpyxl
+
+      - name: Buscar el Excel más reciente
+        id: buscar
+        run: |
+          ARCHIVO=$(ls excel/*.xlsm excel/*.xlsx 2>/dev/null | head -1)
+          echo "archivo=$ARCHIVO" >> $GITHUB_OUTPUT
+
+      - name: Convertir Excel a datos.json
+        run: python convertir.py "${{ steps.buscar.outputs.archivo }}"
+
+      - name: Guardar datos.json en el repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add datos.json
+          git diff --staged --quiet || git commit -m "Actualizar datos: $(date +'%d %b %Y')"
+          git push
